@@ -8,6 +8,11 @@ from rest_framework.decorators import api_view
 from rest_framework.generics import CreateAPIView
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
+from rest_framework.mixins import (CreateModelMixin,
+                                   RetrieveModelMixin,
+                                   UpdateModelMixin,
+                                   DestroyModelMixin)
+from rest_framework.viewsets import GenericViewSet
 
 from config import settings
 from .models import PasswordResets
@@ -22,7 +27,11 @@ class RegisterAPIView(CreateAPIView):
         serializer.save()
 
 
-class ProfileUpdateView(ModelViewSet):
+class ProfileUpdateView(CreateModelMixin,
+                        RetrieveModelMixin,
+                        UpdateModelMixin,
+                        DestroyModelMixin,
+                        GenericViewSet):
     queryset = get_user_model().objects.all()
     http_method_names = ['put', 'patch', 'delete', 'get']
     serializer_class = ProfileSerializer

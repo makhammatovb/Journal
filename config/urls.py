@@ -18,11 +18,11 @@ from drf_yasg import openapi
 
 schema_view = get_schema_view(
     openapi.Info(
-        title="DRF project template",
+        title="Journal project",
         default_version='v1',
-        description="Django REST Framework project template with Authorization (Simple JWT)",
+        description="Last DRF project of Najot Ta'lim, named Journal",
         terms_of_service="https://www.google.com/policies/terms/",
-        contact=openapi.Contact(email="contact@snippets.local"),
+        contact=openapi.Contact(email="fmetube01@gmail.com"),
         license=openapi.License(name="No License"),
     ),
     public=True,
