@@ -6,6 +6,7 @@ from .models import (
     RequirementsInformation,
     FAQ,
     Publications,
+    Papers,
 )
 
 
@@ -14,7 +15,7 @@ class RequirementsFilter(FilterSet):
 
     class Meta:
         model = RequirementsInformation
-        fields = []
+        fields = ['keyword']
 
     def filter_keyword(self, queryset, name, value):
         title_queryset = queryset.filter(Q(req_title__icontains=value))
@@ -48,3 +49,15 @@ class PublicationsFilter(FilterSet):
         if publications_queryset.exists():
             return publications_queryset
         return queryset.filter(Q(description_en__icontains=value))
+
+
+class PapersInfoFilter(FilterSet):
+    name = CharFilter(lookup_expr="icontains")
+    author = CharFilter(field_name="author__first_name", lookup_expr="icontains")
+    description = CharFilter(lookup_expr="icontains")
+    category = CharFilter(field_name="category__name", lookup_expr="icontains")
+    references = CharFilter(field_name="papersinformation__references", lookup_expr="icontains")
+
+    class Meta:
+        model = Papers
+        fields = ['name', 'author', 'description', 'category', 'references']

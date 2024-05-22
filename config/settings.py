@@ -2,6 +2,7 @@ from datetime import timedelta
 from pathlib import Path
 from dotenv import load_dotenv
 from os import getenv
+import os
 
 load_dotenv()
 
@@ -37,6 +38,7 @@ THIRD_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'ckeditor',
+    'django_filters',
 ]
 
 MY_APPS = [
@@ -119,13 +121,13 @@ USE_I18N = True
 USE_TZ = True
 
 
-MEDIA_URL = 'media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 
 if DEBUG is False:
     # STATIC_ROOT = '/home/my_domain/domain_dir/static/'
@@ -158,7 +160,10 @@ REST_FRAMEWORK = {
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
-    'PAGE_SIZE': 5
+    'PAGE_SIZE': 5,
+    'DEFAULT_PERMISSION_CLASSES': (
+        'app_tuit.permissions.IsAuthorOrReadOnly',
+    )
 
 }
 
@@ -208,6 +213,7 @@ EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_USE_TLS = True
 EMAIL_PORT = 587
 EMAIL_HOST_USER = "fmetube01@gmail.com"
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 # https://myaccount.google.com/apppasswords?rapt=AEjHL4PYdZpsTQqErM5VNV1NzBbxaWGWaAuFbG12GJMlrDId-ycKtnRDq5MSuAg_FmxYqa-gs1_wnVbAFPqwO2hfSOSpRPX0JMIYIr8aRewzquXL0x9t3us
 EMAIL_HOST_PASSWORD = "ttop yidz datd zsqc"
 # EMAIL_USE_SSL = True

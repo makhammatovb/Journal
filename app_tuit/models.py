@@ -60,6 +60,20 @@ class Contacts(models.Model):
         verbose_name_plural = 'Contacts'
 
 
+class SendEmail(models.Model):
+    first_name = models.CharField(max_length=255)
+    email = models.EmailField(unique=True)
+    message = models.TextField()
+
+    def __str__(self):
+        return self.first_name
+
+    class Meta:
+        db_table = 'send_email'
+        verbose_name = 'Send Email'
+        verbose_name_plural = 'Send Emails'
+
+
 class Categories(models.Model):
     name = models.CharField(max_length=255)
 
@@ -79,6 +93,7 @@ class Publications(models.Model):
     file_uz = models.FileField(upload_to='publications/')
     file_en = models.FileField(upload_to='publications/', null=True, blank=True)
     category = models.ManyToManyField(Categories, related_name='publications')
+    author = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
 
     def __str__(self):
         return f"{self.description_uz} - {self.description_en}"
@@ -122,6 +137,7 @@ class PapersInformation(models.Model):
     file_en = models.FileField(upload_to='papers/en', null=True, blank=True)
     references_count = models.PositiveIntegerField(default=0)
     references = RichTextField(null=True, blank=True)
+    papers = models.ForeignKey(Papers, on_delete=models.CASCADE)
 
     def __str__(self):
         return f"{self.name_uz} - {self.name_en}"
@@ -132,10 +148,12 @@ class PapersInformation(models.Model):
 
 
 class Reviewers(models.Model):
+    first_name = models.CharField(max_length=255)
+    last_name = models.CharField(max_length=255)
     paper = models.ForeignKey(PapersInformation, on_delete=models.CASCADE)
     reviewer = models.ManyToManyField(CustomUser, related_name='reviewers')
-    review = models.TextField()
-    file = models.FileField(upload_to='review/')
+    review_text = models.TextField()
+    review_file = models.FileField(upload_to='review/')
     date = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

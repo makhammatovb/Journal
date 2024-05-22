@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from rest_framework.serializers import SerializerMethodField
 
+from users.models import CustomUser
 from .models import (
     Requirements,
     RequirementsInformation,
@@ -62,29 +63,55 @@ class FAQGETSerializer(serializers.ModelSerializer):
             return obj.answer_uz
 
 
-class ContactSerializer(serializers.Serializer):
+class SendEmailSerializer(serializers.Serializer):
     first_name = serializers.CharField(max_length=25)
     email = serializers.EmailField()
     message = serializers.CharField(max_length=255)
     subject = serializers.CharField(max_length=255)
 
 
+class ContactsSerializer(serializers.Serializer):
+    first_name = serializers.CharField(max_length=25)
+    email = serializers.EmailField()
+    message = serializers.CharField(max_length=500)
+
+    def create(self, validated_data):
+        contact = Contacts.objects.create(**validated_data)
+        return contact
+
+
 class CategoriesSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Categories
-        fields = '__all__'
+        fields = ['name',]
+
+
+class AuthorSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = CustomUser
+        fields = ['first_name', 'last_name']
+
+
+class ReviewerSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Reviewers
+        fields = ['first_name', 'last_name']
 
 
 class PublicationsGETSerializer(serializers.ModelSerializer):
-    publication = serializers.SerializerMethodField(method_name='get_publication_name', read_only=True)
+    description = serializers.SerializerMethodField(method_name='get_description', read_only=True)
     file = serializers.SerializerMethodField(method_name='get_file', read_only=True)
+    author = AuthorSerializer(read_only=True)
 
     class Meta:
         model = Publications
-        fields = ('publication', 'file')
+        fields = ['image', 'description','description_en', 'file', 'category', 'author']
+        read_only_fields = ['author']
 
-    def get_publication_name(self,obj):
+    def get_description(self,obj):
         try:
             lang = self.context['request'].GET['lang']
             if lang == 'en':
@@ -93,34 +120,63 @@ class PublicationsGETSerializer(serializers.ModelSerializer):
         except:
             return obj.description_uz
 
-    def get_file(self,obj):
-        try:
-            lang = self.context['request'].GET['lang']
-            if lang == 'en':
-                return obj.file_en
-            return obj.file_uz
-        except:
-            return obj.file_uz
+    def get_file(self, obj):
+        lang = self.context['request'].GET.get('lang', 'uz')
+        file_field = obj.file_en if lang == 'en' else obj.file_uz
+        if file_field:
+            return f"http://127.0.0.1:8000/{file_field.url}"
+        return None
+
 
 class PublicationsSerializer(serializers.ModelSerializer):
+    author = AuthorSerializer(read_only=True)
 
     class Meta:
         model = Publications
-        fields = '__all__'
+        fields = ['image', 'description_uz', 'file_uz', 'category', 'author']
+        read_only_fields = ['author']
+
+    def create(self, validated_data):
+        request = self.context.get('request', None)
+        if request and hasattr(request, 'user'):
+            validated_data['author'] = request.user
+        return super(PublicationsSerializer, self).create(validated_data)
 
 
 class PapersSerializer(serializers.ModelSerializer):
+    author = AuthorSerializer(read_only=True)
+    references = serializers.SerializerMethodField(method_name='get_references', read_only=True)
 
     class Meta:
         model = Papers
-        fields = '__all__'
+        fields = ['id', 'category', 'name', 'author', 'pub_date', 'views', 'description', 'references']
+        read_only_fields = ['author']
+
+    def create(self, validated_data):
+        request = self.context.get('request', None)
+        if request and hasattr(request, 'user'):
+            validated_data['author'] = request.user
+        return super(PapersSerializer, self).create(validated_data)
+
+    def get_references(self, obj):
+        papers_info = obj.papersinformation_set.first()
+        return papers_info.references if papers_info else None
 
 
 class PapersInformationSerializer(serializers.ModelSerializer):
+    author = AuthorSerializer(read_only=True)
+    reviews = ReviewerSerializer(read_only=True, many=True)
 
     class Meta:
         model = PapersInformation
-        fields = '__all__'
+        fields = ['name_uz','pub_date', 'author', 'views',  'reviews', 'description_uz', 'keywords', 'article_uz', 'file_uz', 'references_count', 'references']
+        read_only_fields = ['author']
+
+    def create(self, validated_data):
+        request = self.context.get('request', None)
+        if request and hasattr(request, 'user'):
+            validated_data['author'] = request.user
+        return super(PapersInformationSerializer, self).create(validated_data)
 
 
 class PapersInformationGETSerializer(serializers.ModelSerializer):
@@ -128,11 +184,18 @@ class PapersInformationGETSerializer(serializers.ModelSerializer):
     description = serializers.SerializerMethodField(method_name='get_description', read_only=True)
     file = serializers.SerializerMethodField(method_name='get_file', read_only=True)
     article = serializers.SerializerMethodField(method_name='get_article', read_only=True)
+    author = AuthorSerializer(read_only=True)
+    reviews = ReviewerSerializer(read_only=True, many=True)
 
     class Meta:
         model = PapersInformation
-        fields = ('name', 'description', 'file', 'article')
+        fields = ['name','pub_date', 'author', 'views',  'reviews', 'description', 'keywords', 'article', 'file', 'references_count', 'references']
 
+    def create(self, validated_data):
+        request = self.context.get('request', None)
+        if request and hasattr(request, 'user'):
+            validated_data['author'] = request.user
+        return super(PapersInformationSerializer, self).create(validated_data)
 
     def get_name(self, obj):
         try:
@@ -153,13 +216,11 @@ class PapersInformationGETSerializer(serializers.ModelSerializer):
             return obj.description_uz
 
     def get_file(self, obj):
-        try:
-            lang = self.context['request'].GET['lang']
-            if lang == 'en':
-                return obj.file_en.url if obj.file_en else None
-            return obj.file_uz if obj.file_uz else None
-        except:
-            return obj.file_uz if obj.file_uz else None
+        lang = self.context['request'].GET.get('lang', 'uz')
+        file_field = obj.file_en if lang == 'en' else obj.file_uz
+        if file_field:
+            return f"http://127.0.0.1:8000{file_field.url}"
+        return None
 
     def get_article(self, obj):
         try:
@@ -183,9 +244,24 @@ class ReviewSerializer(serializers.ModelSerializer):
         return data
 
 
-class MenuSerializer(serializers.ModelSerializer):
+class LastEditionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = PapersInformation
-        fields = ['id', 'name_uz', 'name_en', 'pub_date', 'views', 'file_uz', 'file_en']
+        fields = ['name_uz', 'description_uz']
+
+
+class LastPaperSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = PapersInformation
+        fields = ['pub_date', 'name_uz', 'description_uz']
+
+
+class MostReadSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = PapersInformation
+        fields = ['name_uz', 'description_uz', 'views']
+
 
